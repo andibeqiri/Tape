@@ -13,6 +13,19 @@ final class KeypadUITests: XCTestCase {
         XCTAssertEqual(app.descendants(matching: .any)["expression"].label, "12+3")
     }
 
+    func testConsecutiveOperatorsAreIgnored() {
+        let app = XCUIApplication()
+        app.launch()
+
+        app.buttons["2"].tap()
+        app.buttons["+"].tap()
+        app.buttons["+"].tap()
+        app.buttons["−"].tap()
+        app.buttons["2"].tap()
+
+        XCTAssertEqual(app.descendants(matching: .any)["expression"].label, "2+2")
+    }
+
     func testButtonCornerIsTappable() {
         let app = XCUIApplication()
         app.launch()

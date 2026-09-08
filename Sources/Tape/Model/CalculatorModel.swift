@@ -24,6 +24,13 @@ final class CalculatorModel {
 
     func insert(_ text: String) {
         let idx = expression.index(expression.startIndex, offsetBy: cursorIndex)
+
+        if text.count == 1, let inserted = text.first, "+-*/".contains(inserted) {
+            let previous = idx > expression.startIndex ? expression[expression.index(before: idx)] : nil
+            let next = idx < expression.endIndex ? expression[idx] : nil
+            guard ![previous, next].contains(where: { $0.map("+-*/".contains) == true }) else { return }
+        }
+
         expression.insert(contentsOf: text, at: idx)
         cursorIndex += text.count
     }
