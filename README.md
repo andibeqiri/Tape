@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="Sources/Tape/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png" alt="Tape app icon" width="112" height="112">
+
 # Tape
 
 ### A calculator that edits the way you think.

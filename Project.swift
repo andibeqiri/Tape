@@ -17,7 +17,10 @@ let project = Project(
                 ],
             ]),
             sources: ["Sources/**"],
-            resources: []
+            resources: ["Sources/Tape/Resources/**"],
+            settings: .settings(base: [
+                "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
+            ])
         ),
         .target(
             name: "TapeUITests",
