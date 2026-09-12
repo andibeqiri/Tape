@@ -1,5 +1,9 @@
 import SwiftUI
 
+private let keypadCornerRadius: CGFloat = 16
+private let cursorScrubPadOutset: CGFloat = 4
+private let keypadHorizontalPadding: CGFloat = 12
+
 // MARK: - Keypad
 
 struct KeypadView: View {
@@ -8,7 +12,6 @@ struct KeypadView: View {
     @State private var isDragging = false
     @State private var enteringDragMode = false
     @State private var lastSteppedX: CGFloat = 0
-    @State private var hasEverDragged = false
 
     private let sensitivity: CGFloat = 10.0
 
@@ -16,14 +19,21 @@ struct KeypadView: View {
         VStack(spacing: 10) {
             buttonGrid
                 .disabled(isDragging)
-                .overlay { if isDragging { dragOverlay } }
-                .opacity(isDragging ? 0.18 : 1.0)
-                .animation(.easeOut(duration: 0.18), value: isDragging)
+                .opacity(isDragging ? 0.9 : 1.0)
 
             hintBar
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, keypadHorizontalPadding)
         .padding(.bottom, 12)
+        .overlay {
+            if isDragging {
+                cursorScrubPad
+                    .padding(.top, -cursorScrubPadOutset)
+                    .ignoresSafeArea(edges: .bottom)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: isDragging)
         .contentShape(Rectangle())
         // Observe the hold without delaying normal button taps.
         .simultaneousGesture(
@@ -31,7 +41,6 @@ struct KeypadView: View {
                 .onEnded { _ in
                     withAnimation(.easeOut(duration: 0.16)) { isDragging = true }
                     enteringDragMode = true
-                    withAnimation(.easeInOut(duration: 0.4)) { hasEverDragged = true }
                 }
         )
         // Drag runs in parallel; the guard keeps it inert until isDragging
@@ -112,36 +121,62 @@ struct KeypadView: View {
 
     // MARK: - Drag mode overlay
 
-    private var dragOverlay: some View {
-        HStack(spacing: 16) {
-            Image(systemName: "arrow.left")
-                .font(.system(size: 20, weight: .semibold))
-            Text("drag to move cursor")
-                .font(.system(size: 16, weight: .medium))
-            Image(systemName: "arrow.right")
-                .font(.system(size: 20, weight: .semibold))
+    private var cursorScrubPad: some View {
+        let cornerRadius = keypadCornerRadius + cursorScrubPadOutset
+        let shape = UnevenRoundedRectangle(
+            topLeadingRadius: cornerRadius,
+            bottomLeadingRadius: 0,
+            bottomTrailingRadius: 0,
+            topTrailingRadius: cornerRadius,
+            style: .continuous
+        )
+
+        return ZStack {
+            Color.clear
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .glassEffect(.clear, in: shape)
+                .overlay {
+                    shape.strokeBorder(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.24),
+                                    Color.white.opacity(0.04),
+                                    Color.white.opacity(0.12),
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 0.75
+                        )
+                }
+                .shadow(color: Color.black.opacity(0.14), radius: 16, y: 8)
+
+            HStack(spacing: 16) {
+                Image(systemName: "arrow.left")
+                    .font(.system(size: 20, weight: .semibold))
+                Text("drag to move cursor")
+                    .font(.system(size: 16, weight: .medium))
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 20, weight: .semibold))
+            }
+            .foregroundStyle(.primary)
+            .padding(.horizontal, 28)
+            .padding(.vertical, 18)
         }
-        .foregroundStyle(.primary)
-        .padding(.horizontal, 28)
-        .padding(.vertical, 18)
-        .glassEffect(.regular, in: .rect(cornerRadius: 20, style: .continuous))
+        .allowsHitTesting(false)
     }
 
-    // MARK: - Hint (fades out after first use)
+    // MARK: - Hint
 
-    @ViewBuilder
     private var hintBar: some View {
-        if !hasEverDragged {
-            HStack(spacing: 5) {
-                Image(systemName: "hand.point.up.left.fill")
-                    .font(.caption2)
-                Text("Hold keypad & drag to move cursor")
-                    .font(.caption2)
-            }
-            .foregroundStyle(.quaternary)
-            .padding(.bottom, 4)
-            .transition(.opacity.combined(with: .move(edge: .bottom)))
+        HStack(spacing: 5) {
+            Image(systemName: "hand.point.up.left.fill")
+                .font(.caption2)
+            Text("Hold keypad & drag to move cursor")
+                .font(.caption2)
         }
+        .foregroundStyle(.quaternary)
+        .padding(.bottom, 4)
     }
 }
 
@@ -176,10 +211,10 @@ struct CalcButton: View {
                 .foregroundStyle(fgStyle)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .modifier(CalcButtonGlass(role: role, accent: theme.accent))
-                .contentShape(.rect(cornerRadius: 16))
+                .contentShape(.rect(cornerRadius: keypadCornerRadius, style: .continuous))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .contentShape(.rect(cornerRadius: 16))
+        .contentShape(.rect(cornerRadius: keypadCornerRadius, style: .continuous))
         .buttonStyle(CalcButtonStyle())
     }
 }
@@ -188,7 +223,7 @@ private struct CalcButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .overlay {
-                RoundedRectangle(cornerRadius: 16)
+                RoundedRectangle(cornerRadius: keypadCornerRadius, style: .continuous)
                     .fill(.white.opacity(configuration.isPressed ? 0.12 : 0))
                     .allowsHitTesting(false)
             }
@@ -203,13 +238,19 @@ private struct CalcButtonGlass: ViewModifier {
     func body(content: Content) -> some View {
         switch role {
         case .digit:
-            content.glassEffect(.regular, in: .rect(cornerRadius: 16))
+            content.glassEffect(.regular, in: .rect(cornerRadius: keypadCornerRadius, style: .continuous))
         case .function:
-            content.glassEffect(.regular, in: .rect(cornerRadius: 16))
+            content.glassEffect(.regular, in: .rect(cornerRadius: keypadCornerRadius, style: .continuous))
         case .operator:
-            content.glassEffect(.regular.tint(accent.opacity(0.18)), in: .rect(cornerRadius: 16))
+            content.glassEffect(
+                .regular.tint(accent.opacity(0.18)),
+                in: .rect(cornerRadius: keypadCornerRadius, style: .continuous)
+            )
         case .equals:
-            content.glassEffect(.regular.tint(accent), in: .rect(cornerRadius: 16))
+            content.glassEffect(
+                .regular.tint(accent),
+                in: .rect(cornerRadius: keypadCornerRadius, style: .continuous)
+            )
         }
     }
 }

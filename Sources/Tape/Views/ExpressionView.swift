@@ -6,33 +6,40 @@ struct ExpressionView: View {
     private var chars: [Character] { Array(model.expression) }
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .center, spacing: 0) {
-                CursorMarker(active: model.cursorIndex == 0)
-                ForEach(Array(chars.enumerated()), id: \.offset) { i, char in
-                    CharView(
-                        char: char,
-                        isOperator: isOperator(char),
-                        onBefore: { model.moveCursor(to: i) },
-                        onAfter:  { model.moveCursor(to: i + 1) }
-                    )
-                    CursorMarker(active: model.cursorIndex == i + 1)
-                }
-                if model.expression.isEmpty {
-                    Color.clear
-                        .frame(width: 40, height: 56)
-                        .contentShape(Rectangle())
-                        .onTapGesture { model.moveCursor(to: 0) }
-                }
-            }
-            .padding(.horizontal, 24)
-            .overlayPreferenceValue(CursorAnchorKey.self) { anchor in
-                if let anchor {
-                    GeometryReader { proxy in
-                        BlinkingCursor()
-                            .position(x: proxy[anchor].midX, y: proxy[anchor].midY)
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .center, spacing: 0) {
+                    CursorMarker(active: model.cursorIndex == 0)
+                        .id(0)
+                    ForEach(Array(chars.enumerated()), id: \.offset) { i, char in
+                        CharView(
+                            char: char,
+                            isOperator: isOperator(char),
+                            onBefore: { model.moveCursor(to: i) },
+                            onAfter:  { model.moveCursor(to: i + 1) }
+                        )
+                        CursorMarker(active: model.cursorIndex == i + 1)
+                            .id(i + 1)
+                    }
+                    if model.expression.isEmpty {
+                        Color.clear
+                            .frame(width: 40, height: 56)
+                            .contentShape(Rectangle())
+                            .onTapGesture { model.moveCursor(to: 0) }
                     }
                 }
+                .padding(.horizontal, 24)
+                .overlayPreferenceValue(CursorAnchorKey.self) { anchor in
+                    if let anchor {
+                        GeometryReader { proxy in
+                            BlinkingCursor()
+                                .position(x: proxy[anchor].midX, y: proxy[anchor].midY)
+                        }
+                    }
+                }
+            }
+            .onChange(of: model.cursorIndex) {
+                proxy.scrollTo(model.cursorIndex, anchor: .trailing)
             }
         }
         .frame(height: 72)
